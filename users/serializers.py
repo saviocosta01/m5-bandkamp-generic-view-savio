@@ -3,8 +3,7 @@ from rest_framework.validators import UniqueValidator
 from .models import User
 
 
-class UserSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
+class UserSerializer(serializers.ModelSerializer):
     username = serializers.CharField(
         validators=[
             UniqueValidator(
@@ -16,9 +15,12 @@ class UserSerializer(serializers.Serializer):
     email = serializers.EmailField(
         validators=[UniqueValidator(queryset=User.objects.all())],
     )
-    password = serializers.CharField(write_only=True)
-    full_name = serializers.CharField(max_length=50, required=False)
-    artistic_name = serializers.CharField(max_length=50)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "password", "full_name", "artistic_name"]
+        read_only_fields = ["id"]
+        extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data: dict) -> User:
         return User.objects.create_user(**validated_data)
@@ -27,6 +29,7 @@ class UserSerializer(serializers.Serializer):
         for key, value in validated_data.items():
             setattr(instance, key, value)
 
+        instance.set_password(validated_data.get("password", instance.password))
         instance.save()
 
         return instance
